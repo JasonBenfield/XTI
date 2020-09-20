@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <BaseVersion Condition="$(BaseVersion) == ''">1.0.1.0</BaseVersion>
+    <DevSuffix Condition="$(DevSuffix) == ''">$(VersionSuffix)</DevSuffix>
+    <DevSuffix Condition="$(DevSuffix) == ''">dev1</DevSuffix>
+	</PropertyGroup>
+  <PropertyGroup Condition="$(Configuration) == 'Release'" >
+    <PackageVersion>$(BaseVersion)</PackageVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(Configuration) == 'Debug'" >
+    <PackageVersion>$(BaseVersion)-$(DevSuffix)</PackageVersion>
+  </PropertyGroup>
+</Project>

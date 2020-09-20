@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="TakeOffline" AfterTargets="BeforePublish" >
+    <Error Text="PublishUrl cannot be blank" Condition="$(PublishUrl) == ''" ContinueOnError="false" />
+    <Message Text="Taking application offline" Importance="high" />
+    <Copy SourceFiles="$(ProjectDir)_app_offline.htm" DestinationFiles="$(PublishUrl)\app_offline.htm" />
+    <Sleep Milliseconds="5000" />
+    <ItemGroup>
+      <FilesToClean Include="$(PublishUrl)\*" Exclude="$(PublishUrl)\app_offline.htm" />
+      <DirectoriesToClean Include="$([System.IO.Directory]::GetDirectories('$(PublishUrl)'))" />
+    </ItemGroup>
+
+    <Message Text="Deleting Files from $(PublishUrl)" Importance="high" />
+    <Delete Files="@(FilesToClean)" ContinueOnError="False" />
+    <Message Text="Deleting Directories from $(PublishUrl)" Importance="high" />
+    <RemoveDir Directories="@(DirectoriesToClean)" />
+  </Target>
+  <Target Name="RestoreOnline" AfterTargets="AfterPublish" >
+    <Message Text="Restoring application online" Importance="high" />
+    <Delete Files="$(PublishUrl)\app_offline.htm" />
+  </Target>
+</Project>
