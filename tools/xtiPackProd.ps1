@@ -1,1 +1,0 @@
-xtiPack.ps1 -config Release
