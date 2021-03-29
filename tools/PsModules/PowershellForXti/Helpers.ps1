@@ -1,4 +1,19 @@
 ﻿
+function Xti-CommitChanges {
+    param(
+        [string] $CommitMessage,
+        [string] $BranchName
+    )
+    $ErrorActionPreference = "Continue"
+    git add --all
+    $diff = (git diff --name-only --cached) | Out-String
+    if(-not [string]::IsNullOrWhiteSpace($diff)) {
+        git commit -m "$CommitMessage"
+        git push origin $BranchName
+    }
+    $ErrorActionPreference = "Stop"
+}
+
 function Get-CurrentBranchname {
     $branchName = (git rev-parse --abbrev-ref HEAD) | Out-String
     return $branchName.Trim()
@@ -24,6 +39,18 @@ function Get-XtiPsCredential {
         [string] $Key
     )
     return Get-StoredCredential -Target $Key
+}
+
+function New-XtiPsCredential {
+    param(
+        [Parameter(Mandatory)]
+        [string] $UserName,
+        [Parameter(Mandatory)]
+        [string] $Password
+    )
+    $secStringPassword = ConvertTo-SecureString $Password -AsPlainText -Force
+    [pscredential] $cred = New-Object System.Management.Automation.PSCredential ($UserName, $secStringPassword)
+    return $cred
 }
 
 function Xti-GitHubAuthentication {
@@ -111,7 +138,7 @@ function Add-XtiLabel {
         [string] $Label,
         $Color
     )
-    $labels = Get-GitHubLabel
+    $labels = $Repo | Get-GitHubLabel
     $label = $labels | Where-Object { $_.name -eq $Label } | Select -First 1
     if($label -eq $null) {
         $Repo | New-GitHubLabel -Label $Label -Color $Color
@@ -144,16 +171,11 @@ function Remove-XtiIssueLabel {
 
 function Get-CurrentXtiVersion {
     param(
-        [ValidateSet("Production", “Development", "Staging", "Test")]
-        $EnvName = "Production",
         [Parameter(Mandatory)]
         [string] $BranchName
     )
-    $originalEnvironment = $env:DOTNET_ENVIRONMENT
-    $env:DOTNET_ENVIRONMENT="Production"
-    $outputPath = "$($env:APPDATA)\XTI\Temp\version.json"
-    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --no-launch-profile -- --Command=GetCurrent --BranchName=$BranchName --OutputPath=$outputPath
-    $env:DOTNET_ENVIRONMENT = $originalEnvironment
+    $outputPath = "$($env:XTI_AppData)\Temp\version.json"
+    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --environment=Production --Command=GetCurrent --BranchName=$BranchName --OutputPath=$outputPath
     $versionJson = Get-Content $OutputPath -Raw | ConvertFrom-Json
     Remove-Item $OutputPath
     return $versionJson.Version;
@@ -161,16 +183,11 @@ function Get-CurrentXtiVersion {
 
 function Get-BranchXtiVersion {
     param(
-        [ValidateSet("Production", “Development", "Staging", "Test")]
-        $EnvName = "Production",
         [Parameter(Mandatory)]
         [string] $BranchName
     )
-    $originalEnvironment = $env:DOTNET_ENVIRONMENT
-    $env:DOTNET_ENVIRONMENT="Production"
-    $outputPath = "$($env:APPDATA)\XTI\Temp\version.json"
-    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --no-launch-profile -- --Command=GetVersion --BranchName=$BranchName --OutputPath=$outputPath
-    $env:DOTNET_ENVIRONMENT = $originalEnvironment
+    $outputPath = "$($env:XTI_AppData)\Temp\version.json"
+    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --environment=Production --Command=GetVersion --BranchName=$BranchName --OutputPath=$outputPath
     $versionJson = Get-Content $OutputPath -Raw | ConvertFrom-Json
     Remove-Item $OutputPath
     return $versionJson.Version;
@@ -180,17 +197,19 @@ function Xti-BeginPublish {
     param (
         [Parameter(Mandatory)]
         [string] $BranchName,
-        [switch] $OutputVersion
+        [switch] $OutputVersion,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        $AppName,
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [ValidateSet(“WebApp”, "Package", "Service")]
+        $AppType
     )
-    $originalEnvironment = $env:DOTNET_ENVIRONMENT
-    $env:DOTNET_ENVIRONMENT="Production"
     $outputPath = ""
     $version = ""
     if($OutputVersion) {
-        $outputPath = "$($env:APPDATA)\XTI\Temp\version.json"
+        $outputPath = "$($env:XTI_AppData)\Temp\version.json"
     }
-    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --no-launch-profile -- --Command=BeginPublish --BranchName=$BranchName --OutputPath=$outputPath
-    $env:DOTNET_ENVIRONMENT = $originalEnvironment
+    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --environment=Production --Command=BeginPublish --BranchName=$BranchName --OutputPath=$outputPath --AppName="`"$AppName`"" --AppType="`"$AppType`""
     if($OutputVersion) {
         $versionJson = Get-Content $outputPath -Raw | ConvertFrom-Json
         Remove-Item $outputPath
@@ -204,8 +223,5 @@ function Xti-EndPublish {
         [Parameter(Mandatory)]
         [string] $BranchName
     )
-    $originalEnvironment = $env:DOTNET_ENVIRONMENT
-    $env:DOTNET_ENVIRONMENT="Production"
-    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --no-launch-profile -- --Command=EndPublish --BranchName=$BranchName
-    $env:DOTNET_ENVIRONMENT = $originalEnvironment
+    & "$($env:XTI_Tools)\XTI_VersionTool\XTI_VersionTool.exe" --environment=Production --Command=EndPublish --BranchName=$BranchName
 }

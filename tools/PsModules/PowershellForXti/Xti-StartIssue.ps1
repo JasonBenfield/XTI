@@ -46,8 +46,8 @@
         }
         if($IssueBranchTitle -eq ""){
             $IssueBranchTitle = $issue.title -replace "\s+", "-"
-            if($IssueBranchTitle.Length -gt 20) {
-                $IssueBranchTitle = $IssueBranchTitle.Substring(0,20)
+            if($IssueBranchTitle.Length -gt 50) {
+                $IssueBranchTitle = $IssueBranchTitle.Substring(0,50)
             }
             $IssueBranchTitle = $IssueBranchTitle.ToLower()
         }

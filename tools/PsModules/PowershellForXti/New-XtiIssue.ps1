@@ -7,7 +7,8 @@
         [Parameter(Mandatory)]
         [string] $IssueTitle,
         $Labels = @(),
-        [string] $Body = ""
+        [string] $Body = "",
+        [switch] $Start
     )
 
     $ErrorActionPreference = "Stop"
@@ -32,4 +33,7 @@
         $repo | Set-GitHubIssue -Issue $issue.number -MilestoneNumber $milestone.number
     }
     Write-Output "Created issue $($issue.number): $($issue.title)"
+    if($Start) {
+        Xti-StartIssue -RepoOwner $RepoOwner -RepoName $RepoName -IssueNumber $issue.number
+    }
 }

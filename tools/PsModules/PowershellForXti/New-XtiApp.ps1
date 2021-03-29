@@ -4,14 +4,11 @@
         [ValidateSet("Production", "Development", "Test", "Staging")]
         $EnvName = "Production",
         [Parameter(Mandatory, ValueFromPipelineByPropertyName = $true)]
-        $AppKey, 
-        [ValidateSet("WebApp", "Package")]
+        $AppName, 
+        [ValidateSet("WebApp", "Package", "Service")]
         [Parameter(Mandatory, ValueFromPipelineByPropertyName = $true)]
         $AppType,
         $AppTitle = ""
     )
-
-    $appTool = "$($env:XTI_Tools)\XTI_AppTool\XTI_AppTool.exe"
-    $env:DOTNET_ENVIRONMENT = $EnvName
-    & $appTool --Command add --AppKey $AppKey --AppType $AppType --AppTitle $AppTitle
+    & "$($env:XTI_Tools)\XTI_AppTool\XTI_AppTool.exe" --environment $EnvName --Command add --AppName $AppName --AppType $AppType --AppTitle $AppTitle
 }

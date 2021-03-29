@@ -9,13 +9,20 @@
 
     $ErrorActionPreference = "Stop"
     
-    Xti-GitHubAuthentication
+    Xti-GitHubAuthentication | Out-Null
+
+    $pullRequestNumber = 0
 
     $repo = Get-GitHubRepository -OwnerName $RepoOwner -RepositoryName $RepoName
     $branchName = Get-CurrentBranchname
     $releaseBranch = Parse-ReleaseBranch $branchName
     if($releaseBranch.IsValid) {
-        $repo | New-GitHubPullRequest -Title "Pull Request for $($releaseBranch.VersionKey)" -Base "master" -Head $branchName
+        if($CommitMessage -eq "") {
+            $CommitMessage = "Changes for $($releaseBranch.VersionKey)"
+        }
+        Xti-CommitChanges -CommitMessage $CommitMessage -BranchName $branchName | Out-Null
+        $pullRequest = $repo | New-GitHubPullRequest -Title "Pull Request for $($releaseBranch.VersionKey)" -Base $repo.default_branch -Head $branchName
+        $pullRequestNumber = $pullRequest.number
     }
     else {
         $issueBranch = Parse-IssueBranch -BranchName $branchName
@@ -44,24 +51,21 @@
             $parentBranchName = "xti/$($versionType)/$($versionKey)"
 
             $closePendingName = "close pending"
-            Add-XtiLabel -Repo $repo -Label $closePendingName -Color BFD4F2
+            Add-XtiLabel -Repo $repo -Label $closePendingName -Color BFD4F2 | Out-Null
     
             if($CommitMessage -eq "") {
                 $CommitMessage = $issue.title
             }
-            $ErrorActionPreference = "Continue"
-            git add --all
-            git commit -m "$CommitMessage"
-            git push origin $branchName
-            $ErrorActionPreference = "Stop"
+            Xti-CommitChanges -CommitMessage $CommitMessage -BranchName $branchName | Out-Null
+            $pullRequest = $repo | New-GitHubPullRequest -Title "Pull Request for $($issue.title)" -Body "Closes #$($issueNumber)" -Base $parentBranchName -Head $branchName
+            $pullRequestNumber = $pullRequest.number
 
-            $repo | New-GitHubPullRequest -Title "Pull Request for $($issue.title)" -Body "Closes #$($issueNumber)" -Base $parentBranchName -Head $branchName
-
-            Add-XtiIssueLabel -Repo $repo -Issue $issue -Label $closePendingName
-            Remove-XtiIssueLabel -Repo $repo -Issue $issue -Label "in progress"
+            Add-XtiIssueLabel -Repo $repo -Issue $issue -Label $closePendingName | Out-Null
+            Remove-XtiIssueLabel -Repo $repo -Issue $issue -Label "in progress" | Out-Null
         }
         else {
             throw "'$($branchName)' is not a branch for an xti issue or release"
         }
     }
+    return $pullRequestNumber
 }

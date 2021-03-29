@@ -14,10 +14,13 @@
     $branchName = Get-CurrentBranchname
     $releaseBranch = Parse-ReleaseBranch $branchName
     if($releaseBranch.IsValid) {
-    
-        $pullRequest = $repo | Get-GitHubPullRequest -Base "master" -Head "$($RepoOwner):$($branchName)" -State All | Select -First 1
+        $version = Get-BranchXtiVersion -BranchName $branchName
+        if($version -eq "0.0.0") {
+            throw "This version has not been published"
+        }
+        $pullRequest = $repo | Get-GitHubPullRequest -Base $repo.default_branch -Head "$($RepoOwner):$($branchName)" -State All | Select -First 1
         if($pullRequest -eq $null) {
-            throw "Pull request not found for $branchName -> master"
+            throw "Pull request not found for $branchName -> $($repo.default_branch)"
         }
         if($pullRequest.state -ne "closed") { 
             throw "Pull request $($pullRequest.number) is '$($pullRequest.state)'"
@@ -35,7 +38,7 @@
             
         $repo | Set-GitHubMilestone -Milestone $milestone.number -Title $milestone.title -State Closed -Confirm:$false
 
-        git checkout master -q
+        git checkout $repo.default_branch -q
     }
     else {
         $issueBranch = Parse-IssueBranch -BranchName $branchName
